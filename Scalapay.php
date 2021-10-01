@@ -172,7 +172,7 @@ class Scalapay extends AbstractPaymentModule
     public function isValidPayment()
     {
         $mode = self::getConfigValue(self::MODE);
-        $valid = false;
+        $valid = true;
         if ($mode === 'TEST'){
             $raw_ips = explode("\n", self::getConfigValue(self::ALLOWED_IP_LIST, ''));
             $allowed_client_ips = array();
