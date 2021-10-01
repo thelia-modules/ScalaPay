@@ -1,0 +1,13 @@
+{
+  "name": "your-vendor/scalapay-module",
+  "description": "Scalapay module for Thelia",
+  "license": "LGPL-3.0-or-later",
+  "type": "thelia-module",
+  "require": {
+    "thelia/installer": "~1.1",
+    "scalapay/scalapay": "^1.1"
+  },
+  "extra": {
+    "installer-name": "Scalapay"
+  }
+}
