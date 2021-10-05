@@ -1,6 +1,6 @@
 # Scalapay
 
-Add a short description here. You can also add a screenshot if needed.
+This module adds the payment solution Scalapay.
 
 ## Installation
 
@@ -14,42 +14,16 @@ Add a short description here. You can also add a screenshot if needed.
 Add it in your main thelia composer.json file
 
 ```
-composer require your-vendor/scalapay-module:~1.0
+composer require thelia/scalapay-module:~1.0
 ```
 
 ## Usage
+* Contact Scalapay to create a Scalapay Partner account https://www.scalapay.com/.
+* Connect to Scalapay to retrieve your api key https://partner.scalapay.com/login.
+* Go to the module configuration and add your api key.
+* Set the operation mode to production
 
-Explain here how to use your module, how to configure it, etc.
+Documentation : https://developers.scalapay.com/docs
 
-## Hook
-
-If your module use one or more hook, fill this part. Explain which hooks are used.
-
-
-## Loop
-
-If your module declare one or more loop, describe them here like this :
-
-[loop name]
-
-### Input arguments
-
-|Argument |Description |
-|---      |--- |
-|**arg1** | describe arg1 with an exemple. |
-|**arg2** | describe arg2 with an exemple. |
-
-### Output arguments
-
-|Variable   |Description |
-|---        |--- |
-|$VAR1    | describe $VAR1 variable |
-|$VAR2    | describe $VAR2 variable |
-
-### Exemple
-
-Add a complete exemple of your loop
-
-## Other ?
-
-If you have other think to put, feel free to complete your readme as you want.
+If you want to use Scalapay in test mode, you can follow this link to get the test environment information of Scalapay :
+https://developers.scalapay.com/docs/test-environments
