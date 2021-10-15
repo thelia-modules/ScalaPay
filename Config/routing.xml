@@ -8,5 +8,7 @@
         <default key="_controller">Scalapay\Controller\ConfigurationController::configure</default>
     </route>
 
-
+    <route id="scalapay.notification_url" path="/scalapay/notification">
+        <default key="_controller">Scalapay\Controller\NotificationController::notificationAction</default>
+    </route>
 </routes>

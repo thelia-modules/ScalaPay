@@ -24,6 +24,7 @@ use Scalapay\Scalapay\Model\Merchant\OrderDetails;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Thelia\Model\Order;
 use Thelia\Module\AbstractPaymentModule;
+use Thelia\Tools\URL;
 
 class Scalapay extends AbstractPaymentModule
 {
@@ -38,7 +39,7 @@ class Scalapay extends AbstractPaymentModule
 
     public function pay(Order $order)
     {
-        if(!$this->checkValidConfiguration()){
+        if (!$this->checkValidConfiguration()) {
             return new RedirectResponse(
                 $this->getPaymentFailurePageUrl(
                     $order->getId(),
@@ -46,15 +47,6 @@ class Scalapay extends AbstractPaymentModule
                 )
             );
         }
-
-        $apiKey = self::getConfigValue(self::ACCESS_KEY);
-
-        $apiUri = Authorization::PRODUCTION_URI;
-        if (self::getConfigValue(self::MODE) === "TEST"){
-            $apiUri = Authorization::SANDBOX_URI;
-        }
-
-        $authorization = new Authorization($apiUri, $apiKey);
 
         $customer = $order->getCustomer();
         $invoiceAddress = $order->getOrderAddressRelatedByInvoiceOrderAddressId();
@@ -93,7 +85,7 @@ class Scalapay extends AbstractPaymentModule
         ;
 
         $itemList = [];
-        foreach ($order->getOrderProducts() as $product){
+        foreach ($order->getOrderProducts() as $product) {
             $itemPrice = new Money();
             $itemPrice
                 ->setAmount($product->getPrice())
@@ -111,7 +103,7 @@ class Scalapay extends AbstractPaymentModule
 
         $merchantOptions = new MerchantOptions();
         $merchantOptions
-            ->setRedirectConfirmUrl($this->getPaymentSuccessPageUrl($order->getId()))
+            ->setRedirectConfirmUrl(URL::getInstance()->absoluteUrl('/scalapay/notification'))
             ->setRedirectCancelUrl($this->getPaymentFailurePageUrl($order->getId(), "Vous avez annulé le paiement"));
 
         $totalAmount = new Money();
@@ -150,14 +142,20 @@ class Scalapay extends AbstractPaymentModule
             ->setShippingAmount($shippingAmount)
             ->setTaxAmount($taxAmount)
             ->setDiscounts([$discount])
-            ->setMerchantReference($order->getRef());
+            ->setMerchantReference($order->getRef())
+        ;
 
         $scalapayApi = new Api();
 
         try {
-            $apiResponse  = $scalapayApi->createOrder($authorization, $orderDetails);
+            $apiResponse  = $scalapayApi->createOrder(self::getApiAuthorization(), $orderDetails);
+
+            // Store toke on order transaction ID field
+            $order->setTransactionRef($apiResponse->getToken())->save();
+
+            // Redirect to payment page
             return new RedirectResponse($apiResponse->getCheckoutUrl());
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             $errorMessage = $e->getMessage();
         }
 
@@ -173,7 +171,7 @@ class Scalapay extends AbstractPaymentModule
     {
         $mode = self::getConfigValue(self::MODE);
         $valid = true;
-        if ($mode === 'TEST'){
+        if ($mode === 'TEST') {
             $raw_ips = explode("\n", self::getConfigValue(self::ALLOWED_IP_LIST, ''));
             $allowed_client_ips = array();
 
@@ -209,5 +207,17 @@ class Scalapay extends AbstractPaymentModule
         $max_amount = self::getConfigValue($max, 0);
 
         return $order_total > 0 && ($min_amount <= 0 || $order_total >= $min_amount) && ($max_amount <= 0 || $order_total <= $max_amount);
+    }
+
+    public static function getApiAuthorization()
+    {
+        $apiKey = self::getConfigValue(self::ACCESS_KEY);
+
+        $apiUri = Authorization::PRODUCTION_URI;
+        if (self::getConfigValue(self::MODE) === "TEST") {
+            $apiUri = Authorization::SANDBOX_URI;
+        }
+
+        return new Authorization($apiUri, $apiKey);
     }
 }

@@ -5,38 +5,25 @@
     <fullnamespace>Scalapay\Scalapay</fullnamespace>
     <descriptive locale="en_US">
         <title>Payment with Scalapay</title>
-        <!--
-        <subtitle></subtitle>
-        <description></description>
-        <postscriptum></postscriptum>
-        -->
     </descriptive>
     <descriptive locale="fr_FR">
         <title>Payment en 3 fois avec Scalapay</title>
     </descriptive>
-    <!-- <logo></logo> -->
-    <!--<images-folder>images</images-folder>-->
     <languages>
         <language>en_US</language>
         <language>fr_FR</language>
     </languages>
-    <version>0.5.0</version>
+    <version>1.0.0</version>
     <authors>
         <author>
-            <name></name>
-            <email></email>
+            <name>Franck Allimant</name>
+            <company>OpenStudio</company>
+            <email>fallimant@openstudio.fr</email>
+            <website>www.openstudio.fr</website>
         </author>
     </authors>
     <type>classic</type>
-    <!--
-    module dependencies
-    <required>
-        <module version="&gt;=0.1">Front</module>
-        <module version="~1.0">HookCart</module>
-        <module version="&gt;0.2">HookSearch</module>
-    </required>
-    -->
-    <thelia>2.4.4</thelia>
+    <thelia>2.4.3</thelia>
     <stability>other</stability>
     <mandatory>0</mandatory>
     <hidden>0</hidden>

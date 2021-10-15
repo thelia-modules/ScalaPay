@@ -2,6 +2,8 @@
 
 This module adds the payment solution Scalapay.
 
+The API Key of the staging (test) environment is `qhtfs87hjnc12kkos`
+
 ## Installation
 
 ### Manually
