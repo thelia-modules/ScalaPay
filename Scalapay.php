@@ -181,7 +181,7 @@ class Scalapay extends AbstractPaymentModule
 
             $client_ip = $this->getRequest()->getClientIp();
 
-            $valid = in_array($client_ip, $allowed_client_ips);
+            $valid = in_array($client_ip, $allowed_client_ips) || in_array('*', $allowed_client_ips);
         }
 
         if ($valid) {
