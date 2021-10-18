@@ -22,6 +22,8 @@ use Scalapay\Scalapay\Model\Merchant\MerchantOptions;
 use Scalapay\Scalapay\Model\Merchant\Money;
 use Scalapay\Scalapay\Model\Merchant\OrderDetails;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Thelia\Core\Translation\Translator;
+use Thelia\Log\Tlog;
 use Thelia\Model\Order;
 use Thelia\Module\AbstractPaymentModule;
 use Thelia\Tools\URL;
@@ -157,6 +159,10 @@ class Scalapay extends AbstractPaymentModule
             return new RedirectResponse($apiResponse->getCheckoutUrl());
         } catch (\Exception $e) {
             $errorMessage = $e->getMessage();
+
+            Tlog::getInstance()->error($errorMessage);
+
+            $errorMessage = self::sanitizeApiErrorResponse($errorMessage);
         }
 
         return new RedirectResponse(
@@ -219,5 +225,30 @@ class Scalapay extends AbstractPaymentModule
         }
 
         return new Authorization($apiUri, $apiKey);
+    }
+
+    public static function sanitizeApiErrorResponse($errorMessage)
+    {
+        /* Le message retourné par l'API peut être de ce style, donc peu pertinent. On le transforme si necessaire.
+        HTTP/1.1 401 Unauthorized
+        Date: Mon, 18 Oct 2021 13:07:20 GMT
+        Content-Type: application/json
+        Content-Length: 12
+        Connection: keep-alive
+        x-amzn-RequestId: 84221dcb-4427-45de-9a56-58731d3e4368
+        x-amz-apigw-id: HZ6tTG9gFiAFYnQ=
+        X-Amzn-Trace-Id: Root=1-616d7188-787368c97e3889db7766fb88
+        Unauthorized
+         */
+
+        if (strstr($errorMessage, 'HTTP') !== false) {
+            return Translator::getInstance()->trans(
+                "Nous sommes désolé, une erreur technique s'est produite. Merci de ré-essayer, ou de nous contacter si le problème persiste.",
+                [],
+                self::DOMAIN_NAME
+            );
+        }
+
+        return $errorMessage;
     }
 }

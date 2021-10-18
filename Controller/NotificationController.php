@@ -29,7 +29,6 @@ use Scalapay\Scalapay\Factory\Api;
 use Symfony\Component\Routing\Router;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
-use Thelia\Core\HttpFoundation\Response;
 use Thelia\Exception\TheliaProcessException;
 use Thelia\Log\Tlog;
 use Thelia\Model\Order;
@@ -54,8 +53,21 @@ class NotificationController extends BasePaymentModuleController
     {
         $frontOfficeRouter = $this->getContainer()->get('router.front');
 
+        $order = null;
+
         try {
-            $order = $this->processScalapayReturn();
+            // The token is in the orderToken request parameter
+            if (null === $token = $this->getRequest()->get('orderToken')) {
+                Tlog::getInstance()->error("Notification Scalapay appelée sans token. Réponse:".print_r($this->getRequest(), 1));
+
+                throw new TheliaProcessException(
+                    $this->getTranslator()->trans("Erreur technique: le token Scalapay est absent.", [], Scalapay::DOMAIN_NAME)
+                );
+            }
+
+            $order = $this->getOrderFromToken($token);
+
+            $this->processScalapayReturn($order, $token);
 
             // Succès: redirection vers la page order-placed
             return $this->generateRedirect(
@@ -84,28 +96,31 @@ class NotificationController extends BasePaymentModuleController
         } catch (\Exception $ex) {
             // Ici on n'a pas pu retrouver la commande : pas possible donc d'afficher order-failed
             // on redirige vers la page d'erreur générique.
-            return $this->generateRedirect(URL::getInstance()->absoluteUrl('error'));
+            $orderId = $order !== null ? $order->getId() : 0;
+
+            return $this->generateRedirect(
+                URL::getInstance()->absoluteUrl(
+                    $frontOfficeRouter->generate(
+                        "order.failed",
+                        [
+                            "order_id" => $orderId,
+                            "message" => Scalapay::sanitizeApiErrorResponse($ex->getMessage())
+                        ],
+                        Router::ABSOLUTE_URL
+                    )
+                )
+            );
         }
     }
 
     /**
-     * @param $tokenName
-     * @return Order
-     * @throws \Exception|PaymentException|\Propel\Runtime\Exception\PropelException
+     * @param Order $order
+     * @param string $token
+     * @throws PaymentException
+     * @throws \Propel\Runtime\Exception\PropelException
      */
-    protected function processScalapayReturn(): Order
+    protected function processScalapayReturn(Order $order, string $token): void
     {
-        // The token is in the orderToken request parameter
-        if (null === $token = $this->getRequest()->get('orderToken')) {
-            Tlog::getInstance()->error("Notification Scalapay appelée sans token. Réponse:".print_r($this->getRequest(), 1));
-
-            throw new TheliaProcessException(
-                $this->getTranslator()->trans("Erreur technique: le token Scalapay est absent.", [], Scalapay::DOMAIN_NAME)
-            );
-        }
-
-        $order = $this->getOrderFromToken($token);
-
         if (null !== $status = $this->getRequest()->get('status')) {
             if ('SUCCESS' !== $status) {
                 throw new PaymentException(
@@ -119,12 +134,12 @@ class NotificationController extends BasePaymentModuleController
 
         $response = $scalapayApi->capture(Scalapay::getApiAuthorization(), $token);
 
+        Tlog::getInstance()->error("Scalapay capture response:" . print_r($response, 1));
+
         // Si la commande est déjà payée on ne fait rien.
         if (!$order->isPaid()) {
             $this->checkPaymentResult($response, $order);
         }
-
-        return $order;
     }
 
     /**
@@ -139,23 +154,20 @@ class NotificationController extends BasePaymentModuleController
             Scalapay::DOMAIN_NAME
         );
 
-        $paymentResult = $response->status;
-        $token = $response->token;
-
-        if ($paymentResult === 'SUCCESS') {
-            Tlog::getInstance()->info("Paiement de la commande " . $order->getRef() . " confirmé, transaction ID $token", [], Scalapay::DOMAIN_NAME);
+        if ($response === 'APPROVED') {
+            Tlog::getInstance()->info("Paiement de la commande " . $order->getRef() . " confirmé, transaction ID ".$order->getTransactionRef(), [], Scalapay::DOMAIN_NAME);
 
             $this->confirmPayment($order->getId());
 
             return;
         }
 
-        Tlog::getInstance()->info("Echec du paiement de la commande ".$order->getRef().", raison: $paymentResult");
+        Tlog::getInstance()->info("Echec du paiement de la commande ".$order->getRef().", raison: $response");
 
         $message = $this->getTranslator()->trans(
             "Votre paiement a été refusé (raison: %raison)",
             [
-                '%raison' => $paymentResult
+                '%raison' => $response
             ],
             Scalapay::DOMAIN_NAME
         );
