@@ -29,20 +29,23 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Thelia\Action\BaseAction;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
+use Thelia\Log\Tlog;
 
 /**
  * Scalapay payment module
  *
- * @author Franck Allimant <franck@cqfdev.fr>
+ * @author Franck Allimant <fallimant@openstudio.fr>
  */
 class SendConfirmationEmail extends BaseAction implements EventSubscriberInterface
 {
     /**
+     * Prevent sending email notifications if the order is not paid.
+     *
      * @param OrderEvent $event
      *
      * @throws \Exception if the message cannot be loaded.
      */
-    public function sendConfirmationEmail(OrderEvent $event)
+    public function sendConfirmationOrNotificationEmail(OrderEvent $event)
     {
         // We send the order confirmation email only if the order is paid
         $order = $event->getOrder();
@@ -53,21 +56,24 @@ class SendConfirmationEmail extends BaseAction implements EventSubscriberInterfa
     }
 
     /**
-     * Checks if order payment module is Scalapay and if order new status is paid, send an email to the customer.
+     * @params OrderEvent $order
+     * If we're the payment module for this order and if the order status is "paid",
+     * send the notification email to the customer and the shop manager.
      *
      * @param OrderEvent $event
      * @param $eventName
      * @param EventDispatcherInterface $dispatcher
-     *
      * @throws \Propel\Runtime\Exception\PropelException
      */
     public function updateStatus(OrderEvent $event, $eventName, EventDispatcherInterface $dispatcher)
     {
         $order = $event->getOrder();
 
-        if ($order->isPaid() && $order->getPaymentModuleId() === Scalapay::getModuleId()) {
-            // Send confirmation email.
+        if ($order->isPaid() && $order->getPaymentModuleId() === (int) Scalapay::getModuleId()) {
             $dispatcher->dispatch(TheliaEvents::ORDER_SEND_CONFIRMATION_EMAIL, $event);
+            $dispatcher->dispatch(TheliaEvents::ORDER_SEND_NOTIFICATION_EMAIL, $event);
+
+            Tlog::getInstance()->debug("Confirmation email sent to customer " . $order->getCustomer()->getEmail());
         }
     }
 
@@ -75,7 +81,8 @@ class SendConfirmationEmail extends BaseAction implements EventSubscriberInterfa
     {
         return array(
             TheliaEvents::ORDER_UPDATE_STATUS           => array("updateStatus", 128),
-            TheliaEvents::ORDER_SEND_CONFIRMATION_EMAIL => array("sendConfirmationEmail", 129)
+            TheliaEvents::ORDER_SEND_CONFIRMATION_EMAIL => array("sendConfirmationOrNotificationEmail", 129),
+            TheliaEvents::ORDER_SEND_NOTIFICATION_EMAIL => array("sendConfirmationOrNotificationEmail", 129)
         );
     }
 }
