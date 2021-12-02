@@ -241,7 +241,7 @@ class Scalapay extends AbstractPaymentModule
         Unauthorized
          */
 
-        if (strstr($errorMessage, 'HTTP') !== false) {
+        if (strpos($errorMessage, 'HTTP') !== false) {
             return Translator::getInstance()->trans(
                 "Nous sommes désolé, une erreur technique s'est produite. Merci de ré-essayer, ou de nous contacter si le problème persiste.",
                 [],
@@ -250,5 +250,15 @@ class Scalapay extends AbstractPaymentModule
         }
 
         return $errorMessage;
+    }
+
+    /**
+     * Le stock est décrémenté une fois la commande payée.
+     *
+     * @return boolean
+     */
+    public function manageStockOnCreation()
+    {
+        return false;
     }
 }
